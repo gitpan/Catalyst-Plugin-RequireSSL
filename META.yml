@@ -1,0 +1,8 @@
+--- #YAML:1.0
+name: Catalyst-Plugin-RequireSSL
+version: 0.01
+author:
+  - Andy Grundman, C<andy@hybridized.org>
+abstract: Force SSL mode on select pages
+license: perl
+generated_by: Module::Build version 0.2604, without YAML.pm
