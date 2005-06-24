@@ -1,4 +1,7 @@
 Revision history for Perl extension Catalyst::Plugin::RequireSSL
 
+0.02    2005-06-23 20:40:00
+        - fixed README file
+
 0.01    2005-06-08 23:45:00
         - initial release

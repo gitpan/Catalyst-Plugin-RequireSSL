@@ -1,132 +1,84 @@
 NAME
-    Catalyst::Plugin::PageCache - Cache the output of entire pages
+    Catalyst::Plugin::RequireSSL - Force SSL mode on select pages
 
 SYNOPSIS
-        use Catalyst 'PageCache';
+        use Catalyst 'RequireSSL';
     
-        MyApp->config->{page_cache} = {
-            expires => 300,
-            set_http_headers => 1,
-            auto_cache => [
-                '/view/.*',
-                '/list',
-            ],
-            debug => 1,
+        MyApp->config->{require_ssl} = {
+            https => 'secure.mydomain.com',
+            http => 'www.mydomain.com',
+            remain_in_ssl => 0,
         };
 
-        $c->cache_page( '3600' );
-    
-        $c->clear_cached_page( '/list' );
+        $c->require_ssl;
 
 DESCRIPTION
-    Many dynamic websites perform heavy processing on most pages, yet this
-    information may rarely change from request to request. Using the
-    PageCache plugin, you can cache the full output of different pages so
-    they are served to your visitors as fast as possible. This method of
-    caching is very useful for withstanding a Slashdotting, for example.
+    Use this plugin if you wish to selectively force SSL mode on some of
+    your web pages, for example a user login form or shopping cart.
 
-    This plugin requires that you also load a Cache plugin. Please see the
-    Known Issues when choosing a cache backend.
+    Simply place $c->require_ssl calls in any controller method you wish to
+    be secured.
+
+    This plugin will automatically disable itself if you are running under
+    the standalone HTTP::Daemon Catalyst server. A warning message will be
+    printed to the log file whenever an SSL redirect would have occurred.
 
 WARNINGS
-    PageCache should be placed at the end of your plugin list.
-
-    You should only use the page cache on pages which have NO user-specific
-    or customized content. Also, be careful if caching a page which may
-    forward to another controller. For example, if you cache a page behind a
-    login screen, the logged-in version may be cached and served to
-    unauthenticated users.
-
-    Note that pages that result from POST requests will never be cached.
-
-PERFORMANCE
-    On my Athlon XP 1800+ Linux server, a cached page is served in 0.008
-    seconds when using the HTTP::Daemon server and any of the Cache plugins.
+    If you utilize different servers or hostnames for non-SSL and SSL
+    requests, and you rely on a session cookie to determine redirection (i.e
+    for a login page), your cookie must be visible to both servers. For more
+    information, see the documentation for the Session plugin you are using.
 
 CONFIGURATION
     Configuration is optional. You may define the following configuration
     values:
 
-        expires => $seconds
+        https => $ssl_host
     
-    This will set the default expiration time for all page caches. If you do
-    not specify this, expiration defaults to 300 seconds (5 minutes).
+    If your SSL domain name is different from your non-SSL domain, set this
+    value.
 
-        set_http_headers => 1
+        http => $non_ssl_host
     
-    Enabling this value will cause Catalyst to set the correct HTTP headers
-    to allow browsers and proxy servers to cache your page. This will
-    further reduce the load on your server. The headers are set in such a
-    way that the browser/proxy cache will expire at the same time as your
-    cache. The Last-Modified header will be preserved if you have already
-    specified it.
+    If you have set the https value above, you must also set the hostname of
+    your non-SSL server.
 
-        auto_cache => [
-            $uri,
-        ]
+        remain_in_ssl
     
-    To automatically cache certain pages, or all pages, you can specify
-    auto-cache URIs as an array reference. Any controller within your
-    application that matches one of the auto_cache URIs will be cached using
-    the default expiration time. URIs may be specified as absolute: '/list'
-    or as a regex: '/view/.*'
-
-        debug => 1
-    
-    This will print additional debugging information to the Catalyst log.
-    You will need to have -Debug enabled to see these messages.
+    If you'd like your users to remain in SSL mode after visiting an
+    SSL-required page, you can set this option to 1. By default, users will
+    be redirected back to non-SSL mode as soon as possible.
 
   METHODS
-    cache_page
-        Call cache_page in any controller method you wish to be cached.
+    require_ssl
+        Call require_ssl in any controller method you wish to be secured.
 
-            $c->cache_page( $expire );
+            $c->require_ssl;
 
-        The page will be cached for $expire seconds. Every user who visits
-        the URI(s) referenced by that controller will receive the page
-        directly from cache. Your controller will not be processed again
-        until the cache expires. You can set this value to as low as 60
-        seconds if you have heavy traffic to greatly improve site
-        performance.
-
-    clear_cached_page
-        To clear the cached value for a URI, you may call clear_cached_page.
-
-            $c->clear_cached_page( '/view/userlist' );
-            $c->clear_cached_page( '/view/.*' );
-    
-        This method takes an absolute path or regular expression. For
-        obvious reasons, this must be called from a different controller
-        than the cached controller. You may for example wish to build an
-        admin page that lets you clear page caches.
-
-    dispatch (extended)
-        Bypass the dispatch phase and send cached content if available
+        The browser will be redirected to the same path on your SSL server.
+        POST requests are never redirected.
 
     finalize (extended)
-        Cache the page output if requested.
+        Redirect back to non-SSL mode if necessary.
 
     setup
         Setup default values.
 
-    _page_cache_key
-        Returns a cache key for the current page.
+    _redirect_uri
+        Generate the redirection URI.
 
 KNOWN ISSUES
-    It is not currently possible to cache pages served from the Static
-    plugin. If you're concerned enough about performance to use this plugin,
-    you should be serving static files directly from your web server anyway.
+    When viewing an SSL-required page that uses static files served from the
+    Static plugin, the static files are redirected to the non-SSL path. It
+    may be possible to work around this by checking the referer protocol,
+    but currently there is no way to determine if a file being served is
+    static content.
 
-    Cache::FastMmap does not have the ability to specify different
-    expiration times for cached data. Therefore, if your
-    MyApp->config->{cache}->{expires} value is set to anything other than 0,
-    you may experience problems with the clear_cached_page method, because
-    the cache index may be removed. For best results, you may wish to use
-    Cache::FileCache or Cache::Memcached as your cache backend.
+    For best results, always serve static files directly from your web
+    server without using the Static plugin.
 
 SEE ALSO
-    Catalyst, Catalyst::Plugin::Cache::FastMmap,
-    Catalyst::Plugin::Cache::FileCache, Catalyst::Plugin::Cache::Memcached
+    Catalyst
 
 AUTHOR
     Andy Grundman, "andy@hybridized.org"

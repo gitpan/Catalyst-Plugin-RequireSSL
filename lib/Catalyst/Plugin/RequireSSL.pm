@@ -4,7 +4,7 @@ use strict;
 use base qw/Class::Accessor::Fast/;
 use NEXT;
 
-our $VERSION = '0.01';
+our $VERSION = '0.02';
 
 __PACKAGE__->mk_accessors( '_require_ssl' );
 
