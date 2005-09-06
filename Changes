@@ -1,5 +1,10 @@
 Revision history for Perl extension Catalyst::Plugin::RequireSSL
 
+0.03    2005-09-05 22:00:00
+        - Proper handling for static files in SSL mode when using
+          Static::Simple.
+        - Code cleanup per Best Practices.
+
 0.02    2005-06-23 20:40:00
         - fixed README file
 

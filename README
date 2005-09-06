@@ -2,7 +2,9 @@ NAME
     Catalyst::Plugin::RequireSSL - Force SSL mode on select pages
 
 SYNOPSIS
-        use Catalyst 'RequireSSL';
+        # in MyApp.pm
+        use Catalyst;
+        MyApp->setup( qw/RequireSSL/ );
     
         MyApp->config->{require_ssl} = {
             https => 'secure.mydomain.com',
@@ -10,6 +12,7 @@ SYNOPSIS
             remain_in_ssl => 0,
         };
 
+        # in any controller methods that should be secured
         $c->require_ssl;
 
 DESCRIPTION
@@ -46,42 +49,32 @@ CONFIGURATION
         remain_in_ssl
     
     If you'd like your users to remain in SSL mode after visiting an
-    SSL-required page, you can set this option to 1. By default, users will
-    be redirected back to non-SSL mode as soon as possible.
+    SSL-required page, you can set this option to 1. By default, this option
+    is disabled and users will be redirected back to non-SSL mode as soon as
+    possible.
 
-  METHODS
-    require_ssl
-        Call require_ssl in any controller method you wish to be secured.
+METHODS
+  require_ssl
+    Call require_ssl in any controller method you wish to be secured.
 
-            $c->require_ssl;
+        $c->require_ssl;
 
-        The browser will be redirected to the same path on your SSL server.
-        POST requests are never redirected.
-
-    finalize (extended)
-        Redirect back to non-SSL mode if necessary.
-
-    setup
-        Setup default values.
-
-    _redirect_uri
-        Generate the redirection URI.
+    The browser will be redirected to the same path on your SSL server. POST
+    requests are never redirected.
 
 KNOWN ISSUES
     When viewing an SSL-required page that uses static files served from the
-    Static plugin, the static files are redirected to the non-SSL path. It
-    may be possible to work around this by checking the referer protocol,
-    but currently there is no way to determine if a file being served is
-    static content.
+    Static plugin, the static files are redirected to the non-SSL path.
 
-    For best results, always serve static files directly from your web
-    server without using the Static plugin.
+    In order to get the correct behaviour where static files are not
+    redirected, you should use the Static::Simple plugin or always serve
+    static files directly from your web server.
 
 SEE ALSO
-    Catalyst
+    Catalyst, Catalyst::Plugin::Static::Simple
 
 AUTHOR
-    Andy Grundman, "andy@hybridized.org"
+    Andy Grundman, <andy@hybridized.org>
 
 COPYRIGHT
     This program is free software, you can redistribute it and/or modify it
