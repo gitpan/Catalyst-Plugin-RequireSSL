@@ -4,9 +4,9 @@ use strict;
 use base qw/Class::Accessor::Fast/;
 use NEXT;
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 
-__PACKAGE__->mk_accessors('_require_ssl');
+__PACKAGE__->mk_accessors( qw/_require_ssl _ssl_strip_output/ );
 
 sub require_ssl {
     my $c = shift;
@@ -19,6 +19,7 @@ sub require_ssl {
             $c->log->warn( "RequireSSL: Would have redirected to $redir" );
         }
         else {
+            $c->_ssl_strip_output(1);
             $c->res->redirect( $redir );
         }
     }
@@ -46,6 +47,11 @@ sub finalize {
         last REDIRECT if $c->config->{require_ssl}->{remain_in_ssl};
         
         $c->res->redirect( $c->_redirect_uri('http') );
+    }
+
+    # do not allow any output to be displayed on the insecure page
+    if ( $c->_ssl_strip_output ) {
+        $c->res->body( undef );
     }
 
     return $c->NEXT::finalize(@_);
@@ -84,12 +90,20 @@ sub _redirect_uri {
 
     my $redir
         = $type . '://' . $c->config->{require_ssl}->{$type} . $c->req->path;
-
+        
     if ( scalar $c->req->param ) {
-        my @params 
-            = map { "$_=" . $c->req->params->{$_} } sort $c->req->param;
-        $redir .= "?" . join "&", @params;
-    }
+        my @params;
+        foreach my $arg ( sort keys %{ $c->req->params } ) {
+            if ( ref $c->req->params->{$arg} ) {
+                my $list = $c->req->params->{$arg};
+                push @params, map { "$arg=" . $_  } sort @{$list};
+            }
+            else {
+                push @params, "$arg=" . $c->req->params->{$arg};
+            }
+        }
+        $redir .= '?' . join( '&', @params );
+    }        
         
     return $redir;
 }

@@ -8,3 +8,8 @@ README
 t/01use.t
 t/02pod.t
 t/03podcoverage.t
+t/04ssl.t
+t/05ssl_host.t
+t/06remain_in_ssl.t
+t/lib/TestApp.pm
+t/lib/TestApp/C/SSL.pm

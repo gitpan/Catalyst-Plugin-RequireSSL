@@ -1,6 +1,6 @@
 ---
 name: Catalyst-Plugin-RequireSSL
-version: 0.03
+version: 0.04
 author:
   - 'Andy Grundman, <andy@hybridized.org>'
 abstract: Force SSL mode on select pages
@@ -10,5 +10,5 @@ requires:
 provides:
   Catalyst::Plugin::RequireSSL:
     file: lib/Catalyst/Plugin/RequireSSL.pm
-    version: 0.03
+    version: 0.04
 generated_by: Module::Build version 0.2611
