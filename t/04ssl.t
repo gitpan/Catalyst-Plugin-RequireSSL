@@ -31,9 +31,9 @@ is( $res->code, 200, 'POST ok' );
 # test that it doesn't redirect if already in SSL mode
 SKIP:
 {
-    skip "These tests require a patch to Catalyst", 7;
-    # patch is to Catalyst::Engine::HTTP::Base in 5.3x
-    #             Catalyst::Engine::Test in 5.5
+    if ( Catalyst->VERSION < 5.5 ) {
+        skip "These tests require Catalyst >= 5.5", 7;
+    }
     ok( $res = request('https://localhost/ssl/secured'), 'request ok' );
     is( $res->code, 200, 'SSL request, ok' );
     

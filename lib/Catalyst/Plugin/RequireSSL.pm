@@ -4,7 +4,7 @@ use strict;
 use base qw/Class::Accessor::Fast/;
 use NEXT;
 
-our $VERSION = '0.04';
+our $VERSION = '0.05';
 
 __PACKAGE__->mk_accessors( qw/_require_ssl _ssl_strip_output/ );
 
@@ -51,7 +51,7 @@ sub finalize {
 
     # do not allow any output to be displayed on the insecure page
     if ( $c->_ssl_strip_output ) {
-        $c->res->body( undef );
+        $c->res->body( '' );
     }
 
     return $c->NEXT::finalize(@_);

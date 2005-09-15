@@ -22,9 +22,9 @@ isnt( $res->content, 'Secured', 'no content displayed on secure page, ok' );
 # test redirect back to HTTP, should not redirect
 SKIP:
 {
-    skip "These tests require a patch to Catalyst", 2;
-    # patch is to Catalyst::Engine::HTTP::Base in 5.3x
-    #             Catalyst::Engine::Test in 5.5
+    if ( Catalyst->VERSION < 5.5 ) {
+        skip "These tests require Catalyst >= 5.5", 2;
+    }
     ok( $res = request('https://localhost/ssl/unsecured'), 'request ok' );
     is( $res->code, 200, 'remain in SSL ok' );
 }
