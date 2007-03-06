@@ -1,5 +1,10 @@
 Revision history for Perl extension Catalyst::Plugin::RequireSSL
 
+0.06    2007-03-06 11:00:00
+        - Added no_cache config option to support wildcard SSL certificates.
+          (Simon Elliott)
+        - Disable properly when running under other development HTTP servers.
+
 0.05    2005-09-15 12:15:00
         - Updated skipped tests to run if Catalyst >= 5.5.
 

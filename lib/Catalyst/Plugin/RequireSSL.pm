@@ -4,7 +4,7 @@ use strict;
 use base qw/Class::Accessor::Fast/;
 use NEXT;
 
-our $VERSION = '0.05';
+our $VERSION = '0.06';
 
 __PACKAGE__->mk_accessors( qw/_require_ssl _ssl_strip_output/ );
 
@@ -64,9 +64,7 @@ sub setup {
 
     # disable the plugin when running under certain engines which don't
     # support SSL
-    # XXX: I didn't include Catalyst::Engine::Server here as it may be used as
-    # a backend in a proxy setup.
-    if ( $c->engine eq "Catalyst::Engine::HTTP" ) {
+    if ( $c->engine =~ /Catalyst::Engine::HTTP/ ) {
         $c->config->{require_ssl}->{disabled} = 1;
         $c->log->warn( "RequireSSL: Disabling SSL redirection while running "
                      . "under " . $c->engine );
@@ -103,8 +101,12 @@ sub _redirect_uri {
             }
         }
         $redir .= '?' . join( '&', @params );
-    }        
-        
+    }  
+          
+	if ( $c->config->{require_ssl}->{no_cache} ) {		
+	    delete $c->config->{require_ssl}->{$type};
+	}
+	
     return $redir;
 }
 
@@ -125,6 +127,7 @@ Catalyst::Plugin::RequireSSL - Force SSL mode on select pages
         https => 'secure.mydomain.com',
         http => 'www.mydomain.com',
         remain_in_ssl => 0,
+		no_cache => 0,
     };
 
     # in any controller methods that should be secured
@@ -168,6 +171,11 @@ If you'd like your users to remain in SSL mode after visiting an SSL-required
 page, you can set this option to 1.  By default, this option is disabled and
 users will be redirected back to non-SSL mode as soon as possible.
 
+	no_cache 
+
+If you have a wildcard certificate you will need to set this option if you are
+using multiple domains on one instance of Catalyst.
+
 =head1 METHODS
 
 =head2 require_ssl
@@ -195,6 +203,10 @@ L<Catalyst>, L<Catalyst::Plugin::Static::Simple>
 =head1 AUTHOR
 
 Andy Grundman, <andy@hybridized.org>
+
+=head1 CONTRIBUTORS
+
+Simon Elliott <simon@browsing.co.uk> (support for wildcards)
 
 =head1 COPYRIGHT
 
