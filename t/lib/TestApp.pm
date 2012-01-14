@@ -12,9 +12,4 @@ TestApp->config(
 
 TestApp->setup( qw/RequireSSL/ );
 
-sub default : Private {
-    my ( $self, $c ) = @_;
-    
-}
-
 1;

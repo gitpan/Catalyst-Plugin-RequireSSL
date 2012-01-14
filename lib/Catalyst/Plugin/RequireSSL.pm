@@ -2,11 +2,11 @@ package Catalyst::Plugin::RequireSSL;
 
 use strict;
 use base qw/Class::Accessor::Fast/;
-use NEXT;
+use MRO::Compat;
 
-our $VERSION = '0.06';
+our $VERSION = '0.07';
 
-__PACKAGE__->mk_accessors( qw/_require_ssl _ssl_strip_output/ );
+__PACKAGE__->mk_accessors( qw/_require_ssl _allow_ssl _ssl_strip_output/ );
 
 sub require_ssl {
     my $c = shift;
@@ -21,8 +21,15 @@ sub require_ssl {
         else {
             $c->_ssl_strip_output(1);
             $c->res->redirect( $redir );
+            $c->detach if $c->config->{require_ssl}->{detach_on_redirect};
         }
     }
+}
+
+sub allow_ssl {
+    my $c = shift;
+
+    $c->_allow_ssl(1);
 }
 
 sub finalize {
@@ -30,7 +37,7 @@ sub finalize {
     
     # Do not redirect static files (only works with Static::Simple)
     if ( $c->isa( "Catalyst::Plugin::Static::Simple" ) ) {
-        return $c->NEXT::finalize(@_) if $c->_static_file;
+        return $c->next::method(@_) if $c->_static_file;
     }
     
     # redirect back to non-SSL mode
@@ -44,7 +51,7 @@ sub finalize {
         # we're already required to be in SSL for this request
         last REDIRECT if $c->_require_ssl;
         # or the user doesn't want us to redirect
-        last REDIRECT if $c->config->{require_ssl}->{remain_in_ssl};
+        last REDIRECT if $c->config->{require_ssl}->{remain_in_ssl} || $c->_allow_ssl;
         
         $c->res->redirect( $c->_redirect_uri('http') );
     }
@@ -54,13 +61,13 @@ sub finalize {
         $c->res->body( '' );
     }
 
-    return $c->NEXT::finalize(@_);
+    return $c->next::method(@_);
 }
 
 sub setup {
     my $c = shift;
 
-    $c->NEXT::setup(@_);
+    $c->next::method(@_);
 
     # disable the plugin when running under certain engines which don't
     # support SSL
@@ -74,39 +81,22 @@ sub setup {
 sub _redirect_uri {
     my ( $c, $type ) = @_;
 
-    # XXX: Cat needs a $c->req->host method...
-    # until then, strip off the leading protocol from base
     if ( !$c->config->{require_ssl}->{$type} ) {
-        my $host = $c->req->base;
-        $host =~ s/^http(s?):\/\///;
-        $c->config->{require_ssl}->{$type} = $host;
+        my $req_uri = $c->req->uri;
+        $c->config->{require_ssl}->{$type} =
+          join(':', $req_uri->host, $req_uri->_port);
     }
 
-    if ( $c->config->{require_ssl}->{$type} !~ /\/$/xms ) {
-        $c->config->{require_ssl}->{$type} .= '/';
-    }
+    $c->config->{require_ssl}->{$type} =~ s/\/+$//;
 
-    my $redir
-        = $type . '://' . $c->config->{require_ssl}->{$type} . $c->req->path;
-        
-    if ( scalar $c->req->param ) {
-        my @params;
-        foreach my $arg ( sort keys %{ $c->req->params } ) {
-            if ( ref $c->req->params->{$arg} ) {
-                my $list = $c->req->params->{$arg};
-                push @params, map { "$arg=" . $_  } sort @{$list};
-            }
-            else {
-                push @params, "$arg=" . $c->req->params->{$arg};
-            }
-        }
-        $redir .= '?' . join( '&', @params );
-    }  
-          
-	if ( $c->config->{require_ssl}->{no_cache} ) {		
-	    delete $c->config->{require_ssl}->{$type};
-	}
-	
+    my $redir = $c->req->uri->clone;
+    $redir->scheme($type);
+    $redir->host_port($c->config->{require_ssl}->{$type});
+
+    if ( $c->config->{require_ssl}->{no_cache} ) {        
+        delete $c->config->{require_ssl}->{$type};
+    }
+    
     return $redir;
 }
 
@@ -120,20 +110,28 @@ Catalyst::Plugin::RequireSSL - Force SSL mode on select pages
 =head1 SYNOPSIS
 
     # in MyApp.pm
-    use Catalyst;
-    MyApp->setup( qw/RequireSSL/ );
-    
-    MyApp->config->{require_ssl} = {
-        https => 'secure.mydomain.com',
-        http => 'www.mydomain.com',
-        remain_in_ssl => 0,
-		no_cache => 0,
-    };
+    use Catalyst qw/
+        RequireSSL
+    /;
+    __PACKAGE__->config(
+        require_ssl => {
+            https => 'secure.mydomain.com',
+            http => 'www.mydomain.com',
+            remain_in_ssl => 0,
+            no_cache => 0,
+            detach_on_redirect => 1,
+        },
+    );
+    __PACKAGE__->setup;
+
 
     # in any controller methods that should be secured
     $c->require_ssl;
 
 =head1 DESCRIPTION
+
+B<Note:> This module is considered to be deprecated for most purposes. Consider
+using L<Catalyst::ActionRole::RequireSSL> instead.
 
 Use this plugin if you wish to selectively force SSL mode on some of your web
 pages, for example a user login form or shopping cart.
@@ -171,10 +169,17 @@ If you'd like your users to remain in SSL mode after visiting an SSL-required
 page, you can set this option to 1.  By default, this option is disabled and
 users will be redirected back to non-SSL mode as soon as possible.
 
-	no_cache 
+    no_cache 
 
 If you have a wildcard certificate you will need to set this option if you are
 using multiple domains on one instance of Catalyst.
+
+    detach_on_redirect 
+
+By default C<< $c->require_ssl >> only calls C<< $c->response->redirect >> but
+does not stop request processing (so it returns and subsequent statements are
+run). This is probably not what you want. If you set this option to a true
+value C<< $c->require_ssl >> will call C<< $c->detach >> when it redirects.
 
 =head1 METHODS
 
@@ -187,6 +192,24 @@ Call require_ssl in any controller method you wish to be secured.
 The browser will be redirected to the same path on your SSL server.  POST
 requests are never redirected.
 
+=head2 allow_ssl
+
+Call allow_ssl in any controller method you wish to access both in SSL and
+non-SSL mode.
+
+    $c->allow_ssl;
+
+The browser will not be redirected, independently of whether the request was
+made to the SSL or non-SSL server.
+
+=head2 setup
+
+Disables this plugin if running under an engine which does not support SSL.
+
+=head2 finalize
+
+Performs the redirect to SSL url if required.
+
 =head1 KNOWN ISSUES
 
 When viewing an SSL-required page that uses static files served from the
@@ -198,7 +221,8 @@ directly from your web server.
 
 =head1 SEE ALSO
 
-L<Catalyst>, L<Catalyst::Plugin::Static::Simple>
+L<Catalyst>, L<Catalyst::ActionRole::RequireSSL>,
+L<Catalyst::Plugin::Static::Simple>
 
 =head1 AUTHOR
 

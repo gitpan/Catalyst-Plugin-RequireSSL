@@ -6,7 +6,7 @@ use warnings;
 use FindBin;
 use lib "$FindBin::Bin/lib";
 
-use Test::More tests => 15;
+use Test::More tests => 19;
 use Catalyst::Test 'TestApp';
 use HTTP::Request::Common;
 
@@ -17,8 +17,12 @@ is( $res->header('location'), 'https://localhost/ssl/secured', 'redirect uri ok'
 isnt( $res->content, 'Secured', 'no content displayed on secure page, ok' );
 
 # test redirection params
-ok( $res = request('http://localhost/ssl/secured?a=2&a=1&b=3&c=4'), 'request ok' );
+ok( $res = request('http://localhost/ssl/secured?a=1&a=2&b=3&c=4'), 'request ok' );
 is( $res->header('location'), 'https://localhost/ssl/secured?a=1&a=2&b=3&c=4', 'redirect with params ok' );
+
+# test that it does not redirect for actions where SSL mode is optional
+ok( $res = request('http://localhost/ssl/maybe_secured'), 'request ok' );
+is( $res->code, 200, 'no redirect for optional SSL action' );
 
 # test that it doesn't redirect on POST
 my $request = POST( 'http://localhost/ssl/secured', 
@@ -43,7 +47,11 @@ SKIP:
     is( $res->header('location'), 'http://localhost/ssl/unsecured', 'redirect uri ok' );
     
     # test redirection params
-    ok( $res = request('https://localhost/ssl/unsecured?a=2&a=1&b=3&c=4'), 'request ok' );
+    ok( $res = request('https://localhost/ssl/unsecured?a=1&a=2&b=3&c=4'), 'request ok' );
     is( $res->header('location'), 'http://localhost/ssl/unsecured?a=1&a=2&b=3&c=4', 'redirect with params ok' );
+
+    # test that it does not redirect for actions where SSL mode is optional
+    ok( $res = request('https://localhost/ssl/maybe_secured'), 'request ok' );
+    is( $res->code, 200, 'no redirect for optional SSL action' );
 }
 
